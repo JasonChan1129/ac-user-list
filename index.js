@@ -37,15 +37,11 @@ axios
 		const data = response.data.results.filter(user => {
 			const userAge = user.age;
 			const userGender = user.gender;
-			if (setting.gender !== 'all') {
-				return (
-					userGender === setting.gender &&
-					userAge >= setting.ageLower &&
-					userAge <= setting.ageUpper
-				);
-			} else {
-				return userAge >= setting.ageLower && userAge <= setting.ageUpper;
-			}
+			return (
+				userAge >= setting.ageLower &&
+				userAge <= setting.ageUpper &&
+				(setting.gender !== 'all' ? userGender === setting.gender : true)
+			);
 		});
 		users.push(...data);
 		renderUsers(getUsersByPage(1));
@@ -77,38 +73,28 @@ function onPanelClick(e) {
 }
 
 function renderUsers(data) {
-	let userHTML = ``;
+	let userHTML = '';
 	// if the user has been liked, render like button with active state.
 	data.forEach(item => {
-		if (favouriteUsers.some(user => user.id === item.id)) {
-			userHTML += `
-            <div class='col-12 col-md-3'>
+		userHTML += `
+		<div class='col-12 col-md-3'>
                 <div class='mb-2'>
                     <div class="card user">
-                        <img src=${item.avatar} class="card-img-top user-avatar" alt='users-avatar' data-bs-toggle="modal" data-bs-target="#user-info-modal" data-id=${item.id}>
+                        <img src=${
+									item.avatar
+								} class="card-img-top user-avatar" alt='users-avatar' data-bs-toggle="modal" data-bs-target="#user-info-modal" data-id=${
+			item.id
+		}>
                         <div class="card-body d-flex justify-content-between align-items-center">
                         <h5 class="card-title">${item.name}</h5>
-                        <span class='btn-like'><i class="fas fa-heart fa-lg" data-id=${item.id}></i></span> 
+                        <span class='btn-like'><i class="${
+									favouriteUsers.some(user => user.id === item.id) ? 'fas' : 'far'
+								}  fa-heart fa-lg" data-id=${item.id}></i></span> 
                         </div>
                     </div>
                 </div>
             </div>
-        `;
-		} else {
-			userHTML += `
-            <div class='col-md-3'>
-                <div class='mb-2'>
-                    <div class="card user">
-                        <img src=${item.avatar} class="card-img-top user-avatar" alt='users-avatar' data-bs-toggle="modal" data-bs-target="#user-info-modal" data-id=${item.id}>
-                        <div class="card-body d-flex justify-content-between align-items-center">
-                        <h5 class="card-title">${item.name}</h5>
-                        <span class='btn-like'><i class="far fa-heart fa-lg" data-id=${item.id}></i></span> 
-                        </div>
-                    </div>
-                </div>
-            </div>    
-        `;
-		}
+		`;
 	});
 	userPanel.innerHTML = userHTML;
 }
@@ -156,9 +142,9 @@ function searchUser(e) {
 }
 
 function addToFavourite(targetID) {
-	const targetUser = users.find(user => user.id === targetID);
 	const found = favouriteUsers.some(user => user.id === targetID);
 	if (found) return alert('User already in your favourite!');
+	const targetUser = users.find(user => user.id === targetID);
 	favouriteUsers.push(targetUser);
 	localStorage.setItem('favouriteUser', JSON.stringify(favouriteUsers));
 	// show toast element
@@ -207,47 +193,21 @@ function toggleLike(element) {
 
 function onSort(e) {
 	const target = e.target;
-	const data = filteredUsers ? filteredUsers : users;
-	if (target.dataset.action === 'nameAsc') {
-		sortNameAsc(data);
-	} else if (target.dataset.action === 'nameDsc') {
-		sortNameDsc(data);
+	const sortInput = filteredUsers ? filteredUsers : users;
+	const compareItem = target.dataset.action;
+	if (target.dataset.order === 'ascending') {
+		sort(sortInput, compareItem, true);
 	} else {
-		sortAge(data);
+		sort(sortInput, compareItem, false);
 	}
+	renderUsers(getUsersByPage(1));
+	renderPaginator(sortInput.length);
 }
 
-function sortNameAsc(data) {
+function sort(data, item, isAscending) {
 	data.sort((a, b) => {
-		const nameA = a.name;
-		const nameB = b.name;
-		// if return > 0, sort b before a, else if return < 0, sort a before b
-		return nameA > nameB ? 1 : -1;
+		return isAscending ? (a[item] > b[item] ? 1 : -1) : a[item] < b[item] ? 1 : -1;
 	});
-	renderUsers(getUsersByPage(1));
-	renderPaginator(data.length);
-}
-
-function sortNameDsc(data) {
-	data.sort((a, b) => {
-		const nameA = a.name;
-		const nameB = b.name;
-		// if return < 0, sort b before a, else if return < 0, sort a before b
-		return nameA < nameB ? 1 : -1;
-	});
-	renderUsers(getUsersByPage(1));
-	renderPaginator(data.length);
-}
-
-function sortAge(data) {
-	data.sort((a, b) => {
-		const ageA = new Date(a.birthday);
-		const ageB = new Date(b.birthday);
-		// if return > 0, sort b before a, else if return < 0, sort a before b
-		return ageA < ageB ? 1 : -1;
-	});
-	renderUsers(getUsersByPage(1));
-	renderPaginator(data.length);
 }
 
 function updateSetting() {
